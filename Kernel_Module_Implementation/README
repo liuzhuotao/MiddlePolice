@@ -1,0 +1,41 @@
+These source codes are Linux Kernel Module implementation. For more details, please refer to the section 7 in the paper. 
+
+Generally speaking, it requires at least three machines (and the machine acted as mbox needs to have multiple NICs) to run the code. But it is possible to combine sender and mbox in one machine such that a two-machine-topology can fit in. Thus, for simplicity, the current code combines the sender and mbox in mbox.c. If you do have a large testbed, simply change the control variable named 'redirect_enabled' in the code. Please read the comments in the code for more detail.
+
+
+Further, refer to the 'architecture.pdf' for graphfic explanation. 
+
+
+Tested Environment:
+
+Linux Kernel Version 3.13.0, 4.0
+
+Two Setting are requrired for running the code. 
+
+1. Turnoff the TSO and GSO in mbox. This is to avoid non-lineaer skb_buff
+
+sudo ethtool -K eth0 gso off
+
+sudo ethtool -K eth0 tso off
+
+
+2. Set the MSS 1300 in victim to reserve space for capabilities
+
+sudo ip route add 10.20.101.0/24 dev eth0 advmss 1400
+
+
+Then you are good to go. In the followings, we provide a sender-victim program for demo purpose. 
+
+1. make to generate the kernel module files. Pay attention to your kernel version
+
+2. insert the kernel module on both the mbox machine and victim machine
+insmod mbox.o
+insmod victim.o
+
+3. To generate traffic, compile with "gcc -fopenmp -o GenTraffic GenTraffic.c -lm -lpthread" to get send tool. You can modify source code to determine how much data this tool will send.
+
+4. Kernel log information is in /var/log/syslog
+
+Limitation:
+
+Virtualization is everywhere now. When using KVM virtual machine, it may be really difficult to avoid skb_buff pagination even if TSO and GSO are turned off. We are looking forward to have feedbacks about this. 
