@@ -1,4 +1,4 @@
-This software is for the porject MiddlePolice, whose preliminary result is published in CCS 2016. 
+This software is for the project MiddlePolice, whose preliminary result is published in CCS 2016. 
 
 MiddlePolice is the first incrementally deployable DDoS-prevention system that can enforce abitrary destination-selectable policies in the middle of the Internet. 
 
