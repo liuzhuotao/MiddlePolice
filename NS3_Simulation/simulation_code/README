@@ -1,0 +1,3 @@
+These sources files are ns-3 simulation code, and each file represents one policy against one attack strategy. For more detail, please refer to section 8.3 for more details.
+
+Environment: ns-3.21
