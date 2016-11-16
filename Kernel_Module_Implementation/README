@@ -8,7 +8,7 @@ Further, refer to the 'architecture.pdf' for graphfic explanation.
 
 Tested Environment:
 
-Linux Kernel Version 3.13.0, 4.0
+Linux Kernel Version 3.13.0, 3.16.0
 
 
 Two Setting are requrired for running the code. 
@@ -25,7 +25,7 @@ sudo ethtool -K eth0 tso off
 sudo ip route add 10.20.101.0/24 dev eth0 advmss 1400
 
 
-Then you are good to go. In the followings, we provide a sender-victim program for demo purpose. 
+Then you are good to go. In the followings, we provide a sender-receiver program for demo purpose. 
 
 1. make to generate the kernel module files. Pay attention to your kernel version
 
@@ -33,7 +33,14 @@ Then you are good to go. In the followings, we provide a sender-victim program f
 insmod mbox.o
 insmod victim.o
 
-3. To generate traffic, compile with "gcc -fopenmp -o GenTraffic GenTraffic.c -lm -lpthread" to get send tool. You can modify source code to determine how much data this tool will send.
+3. To generate traffic, we offer a sender-receiver program. But you implement one by your self. 
+
+This program is designed for sending co-flows. So it has redundant components than simply generate traffic. Compile the sender with "gcc -fopenmp -o GenTraffic GenTraffic.c -lm -lpthread" and compile the receiver with "gcc -o receiver receiver.c". 
+
+In the GenTraffic.c you can specify the flow size by simply changing line 161
+
+Then you are good to go: one sender, run ./GenTraffic <Dest IP>
+On receiver, run ./receiver
 
 4. Kernel log information is in /var/log/syslog
 

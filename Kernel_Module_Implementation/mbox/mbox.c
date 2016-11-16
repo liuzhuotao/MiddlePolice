@@ -262,7 +262,10 @@ unsigned int insertiTable(unsigned int srcaddr){
 
 }
 
-/*AES related Code*/
+/* 
+ * MAC generation related Code
+ *  We reuse a large fraction of code published in https://github.com/kokke/tiny-AES128-C
+ */
 
 // Enable both ECB and CBC mode. Note this can be done before including aes.h or at compile-time.
 // E.g. with GCC by using the -D flag: gcc -c aes.c -DCBC=0 -DECB=1
