@@ -1,4 +1,4 @@
-These source files are used for source validation. For more detail, please refer to section 6 in the paper for more details
+These source files are used for source validation. For more detail, please refer to section 6 in the paper.
 
 To start the verifier, run sudo python server.py YOUR_SERVER_IP. You can host the server on either localhost or any publicly accessible IPs.
 
