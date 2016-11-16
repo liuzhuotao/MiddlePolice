@@ -5,3 +5,6 @@ MiddlePolice is the first incrementally deployable DDoS-prevention system that c
 Our research group in UIUC is currently in active research for MiddlePolice. Our view about MiddlePolice is big. Please direct any feedback, regarding with MiddlePolice or the released software, to zliu48@illinois.edu. 
 
 
+The source code is released under CRAPL
+
+
