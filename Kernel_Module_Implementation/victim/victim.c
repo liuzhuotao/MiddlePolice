@@ -10,8 +10,8 @@
 #define exist_capabilitylist_num 0
 #define capability_len 60
 
-char mbox_ip[15] = "10.20.101.3";
-char victim_ip[15] = "10.20.101.252";
+char mbox_ip[15] = "192.168.1.174";
+char victim_ip[15] = "192.168.2.253";
 unsigned int mbox_networkip = 0;
 unsigned int victim_networkip = 0;
 
