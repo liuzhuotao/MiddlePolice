@@ -52,18 +52,22 @@
 
 
 /*
- * Some control variables for easy debug. 
+ * Control variables 
  */
-int IP_in_UDP_ENCAP = 0; // Whether the packet is encapsulated into UDP
+// whether perform UDP encapsulation or not
+int IP_in_UDP_ENCAP = 0; 
 
-// If you do not have a machine with two NICs, it is possible to combine the sender and mbox together such that a minimum two-machine-topology can run MiddlePolice code. In this case, set the following variable to zero
+// If you did have separate machines for senders and mboxes, please set this control variable to 1. Otherwise, if you combine sender and mbox together in one box, please disable this variable.  
 int redirect_enabled = 0; 
+
+// This variable is for debugging. Enable it to test the full functionality of MiddlePolice.
+int Add_Trim_Capability = 1;
 
 /*
  * Global variables
  */
-char mbox_ip[15] = "192.168.1.252";
-char victim_ip[15] = "192.168.1.253";
+char mbox_ip[15] = "192.168.1.174";
+char victim_ip[15] = "192.168.2.253";
 unsigned int mbox_networkip = 0;
 unsigned int victim_networkip = 0;
 
@@ -262,10 +266,7 @@ unsigned int insertiTable(unsigned int srcaddr){
 
 }
 
-/* 
- * MAC generation related Code
- *  We reuse a large fraction of code published in https://github.com/kokke/tiny-AES128-C
- */
+/*AES related Code*/
 
 // Enable both ECB and CBC mode. Note this can be done before including aes.h or at compile-time.
 // E.g. with GCC by using the -D flag: gcc -c aes.c -DCBC=0 -DECB=1
@@ -1054,7 +1055,7 @@ unsigned int hook_func_in(unsigned int hooknum, struct sk_buff *skb, const struc
      *	1. In PRE_ROUTING hook, we handle the capability related operations
      *	2. In POST_ROUTING hook, we rewrite the saddr as mbox's saddr
      */
-    if(iph->saddr == victim_networkip && iph->protocol == IPPROTO_TCP)
+    if(Add_Trim_Capability && iph->saddr == victim_networkip && iph->protocol == IPPROTO_TCP)
     {
 	tcph = (struct tcphdr *)((__u32 *)iph+ iph->ihl);		
 	tcplen = skb->len - ip_hdrlen(skb);
@@ -1075,7 +1076,7 @@ unsigned int hook_func_in(unsigned int hooknum, struct sk_buff *skb, const struc
 		    // Inspect capability feedback 
 		    memcpy(getCapability, (skb->data + skb->len - res1*capability_len), capability_len);
 		    cap = (struct capability *)getCapability;
-		    //printk(KERN_INFO "get capability skb->len:%u skb->data_len:%u num=%u saddr=%u timestamp=%lu code=%s <res1:%u>\n",skb->len, skb->data_len, cap->num, cap->saddr, cap->timestamp, cap->code, res1);
+		    printk(KERN_INFO "get capability skb->len:%u skb->data_len:%u id=%u saddr=%u timestamp=%lu code=%s <res1:%u>\n",skb->len, skb->data_len, cap->id, cap->saddr, cap->timestamp, cap->code, res1);
 
 		    /*
 		     * For experimental purpose, simulate the capability verification
@@ -1119,6 +1120,7 @@ unsigned int hook_func_in(unsigned int hooknum, struct sk_buff *skb, const struc
 	tcph = (struct tcphdr *)((__u32 *)iph+ iph->ihl);
 	tcplen = skb->len - ip_hdrlen(skb);
 	if(ntohs(tcph->dest) == 9877){
+        spin_lock_irq(&mylock);
 	// redirect the traffic to the victim
 	iph->daddr = victim_networkip; 
 
@@ -1127,6 +1129,7 @@ unsigned int hook_func_in(unsigned int hooknum, struct sk_buff *skb, const struc
 	tcph->check = tcp_v4_check(tcplen, iph->saddr, iph->daddr, csum_partial(tcph, tcplen, 0));
 	skb->ip_summed = CHECKSUM_NONE;
 	ip_send_check(iph);
+        spin_unlock_irq(&mylock);
     	}
     }
 
@@ -1207,7 +1210,7 @@ unsigned int hook_func_out(unsigned int hooknum, struct sk_buff *skb, const stru
     /* 
      * Handling all packets targetting the victim (from sources)
      */ 
-    if (iph->daddr == victim_networkip) {
+    if (Add_Trim_Capability && iph->daddr == victim_networkip) {
 	/* 
 	 * Interpret the packet 
 	 */
@@ -1338,19 +1341,24 @@ unsigned int hook_func_out(unsigned int hooknum, struct sk_buff *skb, const stru
 	
 	    // Capability Handling
 	    if(jiffies <= (temp->TA + detection_period - Th_rtt) && temp->PID < Th_cap){
-
+		//If data_len is not 0, need sk_buff linerize.  zero is returned and the old skb data released.	
+		skb_linearize(skb); 		
 		printk(KERN_INFO "INSERT====>Before:Insert %u capability len:%0x data_len:%u tailroom:%u head:%0x data:%0x tail:%0x end:%0x iplen:%x\n", temp->PID, skb->len, skb->data_len, skb->end-skb->tail, skb->head,skb->data, skb->tail, skb->end, ntohs(iph->tot_len));
-		if((skb->end - skb->tail < capability_len)) return NF_ACCEPT;
+		
+		if((skb->end - skb->tail) < capability_len) {
+		    spin_unlock_irq(&mylock);	    
+		    return NF_ACCEPT;
+		}
+		
+		(temp->PID)++;
 
-		temp->PID++;
-
-		/*
-		 * For simplicity of debugging, we simulate the capabilty computation by calling the CBC function
-		 */
+		
+		//For simplicity of debugging, we simulate the capabilty computation by calling the CBC function
 		cap->id = temp->PID;
 		cap->saddr = iph->saddr;
 		cap->timestamp = jiffies;
 		test_encrypt_cbc();
+
 		memcpy(cap->code, encryption_code, 36);
 
 		// Append capability at the footer of the skb
@@ -1366,6 +1374,7 @@ unsigned int hook_func_out(unsigned int hooknum, struct sk_buff *skb, const stru
 		// Recompute checksum to ensure correctiveness
 		iph->tot_len = iph->tot_len + htons(capability_len);
 		tcplen = skb->len - ip_hdrlen(skb);
+
 		tcph->check = 0; 
 		tcph->check = tcp_v4_check(tcplen, iph->saddr, iph->daddr, csum_partial(tcph, tcplen, 0));
 		skb->ip_summed = CHECKSUM_NONE;
@@ -1444,10 +1453,11 @@ unsigned int hook_func_out(unsigned int hooknum, struct sk_buff *skb, const stru
      * Redirect all packets targetting the sources (from victim)
      *	1. Change the saddr as if the packet is from the mbox (which is what the source expects)
      */ 
-    else if (redirect_enabled && iph->saddr == victim_networkip && ntohs(tcph->source) == 9877 && iph->protocol == IPPROTO_TCP) {
+    else if (redirect_enabled && iph->saddr == victim_networkip && iph->protocol == IPPROTO_TCP) {
 	tcph = (struct tcphdr *)((__u32 *)iph + iph->ihl);
-
-	if (tcph->ack) {
+	
+	if (ntohs(tcph->source) == 9877 && tcph->ack) {
+	    spin_lock_irq(&mylock);
 	    iph->saddr = mbox_networkip;
 
 	    // recompute checksum
@@ -1456,6 +1466,7 @@ unsigned int hook_func_out(unsigned int hooknum, struct sk_buff *skb, const stru
 	    tcph->check = tcp_v4_check(tcplen, iph->saddr, iph->daddr, csum_partial(tcph, tcplen, 0));
 	    skb->ip_summed = CHECKSUM_NONE;
 	    ip_send_check(iph);
+	    spin_unlock_irq(&mylock);
 	}
 
     }
