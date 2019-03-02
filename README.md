@@ -10,6 +10,6 @@ Related publications include:
 
 [1] Zhuotao Liu, Hao Jin, Yih-Chun Hu, Michael Bailey, "MiddlePolice: Toward Enforcing Destination-Defined Policies in the Middle of the Internet", ACM Conference on Computer and Communications Security (CCS) 2016
 
-[2] Zhuotao Liu, Hao Jin, Yih-Chun Hu, Michael Bailey, "Practical Proactive DDoS-Attack Mitigation via Endpoint-Driven In-Network Traffic Control", IEEE/ACM Trans. on Networking (TON)
+[2] Zhuotao Liu, Hao Jin, Yih-Chun Hu, Michael Bailey, "Practical Proactive DDoS-Attack Mitigation via Endpoint-Driven In-Network Traffic Control", IEEE/ACM Trans. on Networking (TON) 2018
 
 [3] Zhuotao Liu, Yuan Cao, Min Zhu, Wei Ge, "Umbrella: Enabling ISPs to Offer Readily Deployable and Privacy-Preserving DDoS Prevention Services," IEEE Trans. Information Forensics and Security (TIFS) 2019
